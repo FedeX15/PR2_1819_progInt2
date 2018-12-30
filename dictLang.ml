@@ -1,10 +1,9 @@
 type ide = string;;
-type element = Elem of ide * exp;;
-type dictionary = Dictionary of element list;;
 type exp = Eint of int | Ebool of bool | Estring of string | Den of ide | Prod of exp * exp | Sum of exp * exp | Diff of exp * exp |
 	Eq of exp * exp | Minus of exp | IsZero of exp | Or of exp * exp | And of exp * exp | Not of exp |
 	Ifthenelse of exp * exp * exp | Let of ide * exp * exp | Fun of ide * exp | FunCall of exp * exp |
-	Letrec of ide * exp * exp | Get of ide * ide;;
+	Letrec of ide * exp * exp | Edictionary of element list | Get of exp * ide
+and element = Elem of ide * exp;;
 
 (*ambiente polimorfo*)
 type 't env = ide -> 't;;
@@ -80,8 +79,15 @@ let non x = if (typecheck "bool" x)
 		Bool(false) -> Bool(true))
 	else failwith("Type error");;
 
+let rec lookfor want d = match d with 
+	Elem(chiave, valore)::resto -> (if chiave = want then valore
+									else lookfor want resto) |
+	[] -> failwith("Not found")
+;;
+
 (*interprete*)
 let rec eval (e : exp) (r : evT env) : evT = match e with
+	Edictionary d -> Dictionary d |
 	Eint n -> Int n |
 	Ebool b -> Bool b |
 	Estring s -> String s |
@@ -118,13 +124,22 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
             		Fun(i, fBody) -> let r1 = (bind r f (RecFunVal(f, (i, fBody, r)))) in
                          			                eval letBody r1 |
             		_ -> failwith("non functional def")) |
-    Get(dict, want) -> if (typecheck "dictionary" (applyenv dict r)) then (match dict with
-    							Dictionary(Elem(keya, vala)::d) -> (if (want = keya) then eval vala r
-    												 else eval (Get(d, want)) r) |
-    							Dictionary([]) -> failwith("not found") |
-    							_ -> failwith("Not dictionary"))
+    Get(dict, want) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
+    							Dictionary(d) -> (eval (lookfor want d) r) |
+    							Dictionary([]) -> failwith("not found")) 
     				   else failwith("nondictionary");;
 
-let emptydict = Dictionary([]);;
-let iddict = Dictionary(Elem("nome", Estring("Federico"))::Elem("cognome", Estring("Matteoni"))::Elem("Matricola", Eint(530257))::[]);;
+let env0 = emptyenv Unbound;;
+
+let emptydict = Edictionary([]);;
+let iddict = Edictionary(Elem("nome", Estring("Federico"))::Elem("cognome", Estring("Matteoni"))::Elem("Matricola", Eint(530257))::[]);;
 (*let iddict2 = Dictionary([Elem("nome", "Federico"); Elem("cognome", "Matteoni"); Elem("Matricola", 530257)]);;*)
+
+let err = Get(iddict, "matricola");;
+let nome = Get(iddict, "nome");;
+let cognome = Get(iddict, "cognome");;
+let matricola = Get(iddict, "Matricola");;
+eval nome env0;;
+eval cognome env0;;
+eval matricola env0;;
+eval err env0;;
