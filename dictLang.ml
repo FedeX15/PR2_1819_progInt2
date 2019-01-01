@@ -145,12 +145,19 @@ let cognome = Get(iddict, "cognome");;
 let matricola = Get(iddict, "Matricola");;
 let iddict2 = Set(iddict, "eta", Eint 22);;
 let dict2 = Set(emptydict, "prova", Estring("ASD"));;
+
+Printf.printf "\n\n****Dictionaries****\n";;
+eval iddict env0;;
+eval emptydict env0;;
+
+Printf.printf "\n\n****Get****\n";;
 eval nome env0;;
 eval cognome env0;;
 eval matricola env0;;
 
-eval iddict env0;;
+Printf.printf "\n\n****Set****\n";;
 eval iddict2 env0;;
-eval emptydict env0;;
 eval dict2 env0;;
+
+Printf.printf "\n\n*****Error*****\n";;
 eval err env0;;
