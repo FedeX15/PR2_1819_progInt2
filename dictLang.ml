@@ -2,7 +2,7 @@ type ide = string;;
 type exp = Eint of int | Ebool of bool | Estring of string | Den of ide | Prod of exp * exp | Sum of exp * exp | Diff of exp * exp |
 	Eq of exp * exp | Minus of exp | IsZero of exp | Or of exp * exp | And of exp * exp | Not of exp |
 	Ifthenelse of exp * exp * exp | Let of ide * exp * exp | Fun of ide * exp | FunCall of exp * exp |
-	Letrec of ide * exp * exp | Edictionary of element list | Get of exp * ide
+	Letrec of ide * exp * exp | Edictionary of element list | Get of exp * ide | Set of exp * ide * exp
 and element = Elem of ide * exp;;
 
 (*ambiente polimorfo*)
@@ -127,7 +127,11 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
     Get(dict, want) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
     							Dictionary(d) -> (eval (lookfor want d) r) |
     							Dictionary([]) -> failwith("not found")) 
-    				   else failwith("nondictionary");;
+    				   else failwith("nondictionary") |
+    Set(dict, field, value) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
+		    							Dictionary(d) -> Dictionary(Elem(field, value)::d))
+		    				   else failwith("nondictionary")
+;;
 
 let env0 = emptyenv Unbound;;
 
@@ -139,7 +143,14 @@ let err = Get(iddict, "matricola");;
 let nome = Get(iddict, "nome");;
 let cognome = Get(iddict, "cognome");;
 let matricola = Get(iddict, "Matricola");;
+let iddict2 = Set(iddict, "eta", Eint 22);;
+let dict2 = Set(emptydict, "prova", Estring("ASD"));;
 eval nome env0;;
 eval cognome env0;;
 eval matricola env0;;
+
+eval iddict env0;;
+eval iddict2 env0;;
+eval emptydict env0;;
+eval dict2 env0;;
 eval err env0;;
