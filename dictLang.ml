@@ -202,6 +202,7 @@ let incrementfunz = Fun("x", Sum(Den "x", Eint 1));;
 let bigfunz = Fun("x", Sum(Den "x", Prod(Den "x", Eint 2)));;
 let applieddict = ApplyOver(incrementfunz, intdict);;
 let applieddict2 = ApplyOver(bigfunz, applieddict);;
+let appliediddict = ApplyOver(bigfunz, iddict4);;
 
 Printf.printf "\n\n****Dictionaries****\n";;
 eval iddict env0;;
@@ -228,6 +229,7 @@ eval cleardict env0;;
 Printf.printf "\n\n****ApplyOver****\n";;
 eval applieddict env0;;
 eval applieddict2 env0;;
+eval appliediddict env0;; (*TODO: fix*)
 
 Printf.printf "\n\n****Error*****\n";;
 eval err env0;;
