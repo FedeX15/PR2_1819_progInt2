@@ -105,7 +105,6 @@ let rec rm dict field = match dict with
 	[] -> []
 ;;
 
-
 (*interprete*)
 let rec eval (e : exp) (r : evT env) : evT = match e with
 	Edictionary(d) -> (let rec evalelement lista = match lista with
