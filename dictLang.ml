@@ -2,7 +2,7 @@ type ide = string;;
 type exp = Eint of int | Ebool of bool | Estring of string | Den of ide | Prod of exp * exp | Sum of exp * exp | Diff of exp * exp |
 	Eq of exp * exp | Minus of exp | IsZero of exp | Or of exp * exp | And of exp * exp | Not of exp |
 	Ifthenelse of exp * exp * exp | Let of ide * exp * exp | Fun of ide * exp | FunCall of exp * exp |
-	Letrec of ide * exp * exp | Edictionary of element list | Get of exp * ide | Set of exp * ide * exp
+	Letrec of ide * exp * exp | Edictionary of element list | Get of exp * ide | Set of exp * ide * exp | Rm of exp * ide
 and element = Elem of ide * exp;;
 
 (*ambiente polimorfo*)
@@ -79,9 +79,9 @@ let non x = if (typecheck "bool" x)
 		Bool(false) -> Bool(true))
 	else failwith("Type error");;
 
-let rec lookfor want d = match d with 
-	Elem(chiave, valore)::resto -> (if chiave = want then valore
-									else lookfor want resto) |
+let rec lookfor field d = match d with 
+	Elem(chiave, valore)::resto -> (if chiave = field then valore
+									else lookfor field resto) |
 	[] -> failwith("Not found")
 ;;
 
@@ -95,7 +95,13 @@ let rec isthere dict field = match dict with
 let rec set dict field value = match dict with
 	Elem(key, valore)::resto -> if key = field then Elem(key, value)::resto
 								else Elem(key, valore)::(set resto field value) |
-	[] -> failwith("Not found");
+	[] -> failwith("Not found")
+;;
+
+let rec rm dict field = match dict with
+	Elem(key, valore)::resto -> if key = field then resto
+								else Elem(key, valore)::(rm resto field) |
+	[] -> []
 ;;
 
 (*interprete*)
@@ -144,7 +150,10 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
     Set(dict, field, value) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
 		    							Dictionary(d) -> if (isthere d field) then (Dictionary(set d field value))
 														 else Dictionary(Elem(field, value)::d))
-		    				   else failwith("nondictionary")
+		    				   else failwith("nondictionary") |
+	Rm(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
+										Dictionary(d) -> Dictionary(rm d field))
+					   else failwith("nondictionary")
 ;;
 
 let env0 = emptyenv Unbound;;
@@ -159,7 +168,9 @@ let cognome = Get(iddict, "cognome");;
 let matricola = Get(iddict, "Matricola");;
 let iddict2 = Set(iddict, "eta", Eint 22);;
 let dict2 = Set(emptydict, "prova", Estring("ASD"));;
-let dict3 = Set(iddict2, "Matricola", Eint 999999);;
+let iddict3 = Set(iddict2, "Matricola", Eint 999999);;
+let iddict4 = Rm(iddict3, "cognome");;
+let dict3 = Rm(dict2, "nonesistente");;
 
 Printf.printf "\n\n****Dictionaries****\n";;
 eval iddict env0;;
@@ -173,6 +184,10 @@ eval matricola env0;;
 Printf.printf "\n\n****Set****\n";;
 eval iddict2 env0;;
 eval dict2 env0;;
+eval iddict3 env0;;
+
+Printf.printf "\n\n****Remove***\n";;
+eval iddict4 env0;;
 eval dict3 env0;;
 
 Printf.printf "\n\n*****Error*****\n";;
