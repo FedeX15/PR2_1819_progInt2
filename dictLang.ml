@@ -3,7 +3,7 @@ type exp = Eint of int | Ebool of bool | Estring of string | Den of ide | Prod o
 	Eq of exp * exp | Minus of exp | IsZero of exp | Or of exp * exp | And of exp * exp | Not of exp |
 	Ifthenelse of exp * exp * exp | Let of ide * exp * exp | Fun of ide * exp | FunCall of exp * exp |
 	Letrec of ide * exp * exp | Edictionary of element list | Get of exp * ide | Set of exp * ide * exp | Rm of exp * ide | Clear of exp | ApplyOver of exp * exp
-and element = Elem of ide * exp;;
+and element = Eelem of ide * exp;;
 
 (*ambiente polimorfo*)
 type 't env = ide -> 't;;
@@ -12,7 +12,7 @@ let applyenv (r : 't env) (i : ide) = r i;;
 let bind (r : 't env) (i : ide) (v : 't) = function x -> if x = i then v else applyenv r x;;
 
 (*tipi esprimibili*)
-type evT = Int of int | Bool of bool | String of string | Unbound | FunVal of evFun | RecFunVal of ide * evFun | Dictionary of element list
+type evT = Int of int | Bool of bool | String of string | Unbound | FunVal of evFun | RecFunVal of ide * evFun | Dictionary of element list | Elem of ide * evT
 and evFun = ide * exp * evT env;;
 
 (*rts*)
@@ -104,9 +104,12 @@ let rec rm dict field = match dict with
 	[] -> []
 ;;
 
+
+
 (*interprete*)
 let rec eval (e : exp) (r : evT env) : evT = match e with
-	Edictionary d -> Dictionary d |
+	Edictionary(elem::d) -> Dictionary((eval elem r)::(eval d r)) |
+	Eelem(chiave, valore) -> Elem(chiave, eval valore r) |
 	Eint n -> Int n |
 	Ebool b -> Bool b |
 	Estring s -> String s |
@@ -138,10 +141,10 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
 							let aEnv = (bind rEnv arg aVal) in
 								eval fBody aEnv |
 				_ -> failwith("non functional value")) |
-        Letrec(f, funDef, letBody) ->
-        		(match funDef with
-            		Fun(i, fBody) -> let r1 = (bind r f (RecFunVal(f, (i, fBody, r)))) in
-                         			                eval letBody r1 |
+	Letrec(f, funDef, letBody) ->
+			(match funDef with
+	    		Fun(i, fBody) -> let r1 = (bind r f (RecFunVal(f, (i, fBody, r)))) in
+	                 			                eval letBody r1 |
             		_ -> failwith("non functional def")) |
     Get(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
     							Dictionary(d) -> (eval (lookfor field d) r) |
@@ -155,13 +158,22 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
 										Dictionary(d) -> Dictionary(rm d field))
 					   else failwith("nondictionary") |
 	Clear(dict) -> if (typecheck "dictionary" (eval dict r)) then Dictionary([])
-				   else failwith("nondictionary")
+				   else failwith("nondictionary") |
+	ApplyOver(funz, dict) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
+										Dictionary(d) -> let rec applyover funz dict = match dict with
+Elem(key, valore)::resto -> (Elem(key, eval (eval (FunCall(funz, valore)) r) r))::(applyover funz resto) |
+															[] -> []
+														 in Dictionary(applyover funz d))
+							 else failwith("nondictionary")
 ;;
+
+(*TESTS*)
 
 let env0 = emptyenv Unbound;;
 
 let emptydict = Edictionary([]);;
-let iddict = Edictionary(Elem("nome", Estring("Federico"))::Elem("cognome", Estring("Matteoni"))::Elem("Matricola", Eint(530257))::[]);;
+let iddict = Edictionary(Eelem("nome", Estring("Federico"))::Eelem("cognome", Estring("Matteoni"))::Eelem("Matricola", Eint(530257))::[]);;
+let intdict = Edictionary(Eelem("Uno", Eint 1)::Eelem("Dieci", Eint 10)::Eelem("Cento", Eint 100)::[]);;
 (*let iddict2 = Dictionary([Elem("nome", "Federico"); Elem("cognome", "Matteoni"); Elem("Matricola", 530257)]);;*)
 
 let err = Get(iddict, "matricola");;
@@ -174,10 +186,13 @@ let iddict3 = Set(iddict2, "Matricola", Eint 999999);;
 let iddict4 = Rm(iddict3, "cognome");;
 let dict3 = Rm(dict2, "nonesistente");;
 let cleardict = Clear(iddict4);;
+let incrementfunz = Fun("x", Sum(Den "x", Eint 1));;
+let applieddict = ApplyOver(incrementfunz, intdict);;
 
 Printf.printf "\n\n****Dictionaries****\n";;
 eval iddict env0;;
 eval emptydict env0;;
+eval intdict env0;;
 
 Printf.printf "\n\n****Get****\n";;
 eval nome env0;;
@@ -195,6 +210,9 @@ eval dict3 env0;;
 
 Printf.printf "\n\n****Clear****\n";;
 eval cleardict env0;;
+
+Printf.printf "\n\n****ApplyOver****\n";;
+eval applieddict env0;;
 
 Printf.printf "\n\n****Error*****\n";;
 eval err env0;;
