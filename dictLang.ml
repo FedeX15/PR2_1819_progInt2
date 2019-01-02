@@ -2,7 +2,7 @@ type ide = string;;
 type exp = Eint of int | Ebool of bool | Estring of string | Den of ide | Prod of exp * exp | Sum of exp * exp | Diff of exp * exp |
 	Eq of exp * exp | Minus of exp | IsZero of exp | Or of exp * exp | And of exp * exp | Not of exp |
 	Ifthenelse of exp * exp * exp | Let of ide * exp * exp | Fun of ide * exp | FunCall of exp * exp |
-	Letrec of ide * exp * exp | Edictionary of element list | Get of exp * ide | Set of exp * ide * exp | Rm of exp * ide
+	Letrec of ide * exp * exp | Edictionary of element list | Get of exp * ide | Set of exp * ide * exp | Rm of exp * ide | Clear of exp | ApplyOver of exp * exp
 and element = Elem of ide * exp;;
 
 (*ambiente polimorfo*)
@@ -153,7 +153,9 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
 		    				   else failwith("nondictionary") |
 	Rm(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
 										Dictionary(d) -> Dictionary(rm d field))
-					   else failwith("nondictionary")
+					   else failwith("nondictionary") |
+	Clear(dict) -> if (typecheck "dictionary" (eval dict r)) then Dictionary([])
+				   else failwith("nondictionary")
 ;;
 
 let env0 = emptyenv Unbound;;
@@ -171,6 +173,7 @@ let dict2 = Set(emptydict, "prova", Estring("ASD"));;
 let iddict3 = Set(iddict2, "Matricola", Eint 999999);;
 let iddict4 = Rm(iddict3, "cognome");;
 let dict3 = Rm(dict2, "nonesistente");;
+let cleardict = Clear(iddict4);;
 
 Printf.printf "\n\n****Dictionaries****\n";;
 eval iddict env0;;
@@ -186,9 +189,12 @@ eval iddict2 env0;;
 eval dict2 env0;;
 eval iddict3 env0;;
 
-Printf.printf "\n\n****Remove***\n";;
+Printf.printf "\n\n****Remove****\n";;
 eval iddict4 env0;;
 eval dict3 env0;;
 
-Printf.printf "\n\n*****Error*****\n";;
+Printf.printf "\n\n****Clear****\n";;
+eval cleardict env0;;
+
+Printf.printf "\n\n****Error*****\n";;
 eval err env0;;
