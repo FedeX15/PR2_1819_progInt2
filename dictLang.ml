@@ -161,9 +161,9 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
 					   else failwith("nondictionary") |
 	Clear(dict) -> if (typecheck "dictionary" (eval dict r)) then Dictionary([])
 				   else failwith("nondictionary") |
-	ApplyOver(funz, dict) -> if (typecheck "dictionary" (eval dict r)) then (match dict with
-										Edictionary(d) -> let rec applyover funz dict = match dict with
-															Eelem(key, valore)::resto -> (Elem(key, eval (FunCall(funz, valore)) r))::(applyover funz resto) |
+	ApplyOver(funz, dict) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
+										Dictionary(d) -> let rec applyover funz dict = match dict with
+															Elem(key, valore)::resto -> (Elem(key, (eval (FunCall(funz, valore)) r)))::(applyover funz resto) |
 															[] -> []
 														 in Dictionary(applyover funz d))
 							 else failwith("nondictionary")
@@ -189,7 +189,9 @@ let iddict4 = Rm(iddict3, "cognome");;
 let dict3 = Rm(dict2, "nonesistente");;
 let cleardict = Clear(iddict4);;
 let incrementfunz = Fun("x", Sum(Den "x", Eint 1));;
+let bigfunz = Fun("x", Sum(Den "x", Prod(Den "x", Eint 2)));;
 let applieddict = ApplyOver(incrementfunz, intdict);;
+let applieddict2 = ApplyOver(bigfunz, applieddict);;
 
 Printf.printf "\n\n****Dictionaries****\n";;
 eval iddict env0;;
@@ -215,6 +217,7 @@ eval cleardict env0;;
 
 Printf.printf "\n\n****ApplyOver****\n";;
 eval applieddict env0;;
+eval applieddict2 env0;;
 
 Printf.printf "\n\n****Error*****\n";;
 eval err env0;;
