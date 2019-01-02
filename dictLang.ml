@@ -137,8 +137,8 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
             		Fun(i, fBody) -> let r1 = (bind r f (RecFunVal(f, (i, fBody, r)))) in
                          			                eval letBody r1 |
             		_ -> failwith("non functional def")) |
-    Get(dict, want) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
-    							Dictionary(d) -> (eval (lookfor want d) r) |
+    Get(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
+    							Dictionary(d) -> (eval (lookfor field d) r) |
     							Dictionary([]) -> failwith("not found")) 
     				   else failwith("nondictionary") |
     Set(dict, field, value) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
