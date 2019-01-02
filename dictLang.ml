@@ -105,6 +105,17 @@ let rec rm dict field = match dict with
 	[] -> []
 ;;
 
+(*Workaround per ApplyOver*)
+let rec toexp (e : evT) : exp = match e with 
+	Int n -> Eint n |
+	Bool b -> Ebool b |
+	String s -> Estring s |
+	Dictionary(d) -> (let rec evalelement lista = match lista with
+								Elem(chiave, valore)::resto -> (Eelem(chiave, (toexp valore)))::(evalelement resto) |
+								[] -> []
+					  in (Edictionary(evalelement d)))
+;;
+
 (*interprete*)
 let rec eval (e : exp) (r : evT env) : evT = match e with
 	Edictionary(d) -> (let rec evalelement lista = match lista with
@@ -162,7 +173,7 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
 				   else failwith("nondictionary") |
 	ApplyOver(funz, dict) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
 										Dictionary(d) -> let rec applyover funz dict = match dict with
-															Elem(key, valore)::resto -> (Elem(key, (eval (FunCall(funz, valore)) r)))::(applyover funz resto) |
+															Elem(key, valore)::resto -> (Elem(key, (eval (FunCall(funz, toexp valore)) r)))::(applyover funz resto) |
 															[] -> []
 														 in Dictionary(applyover funz d))
 							 else failwith("nondictionary")
