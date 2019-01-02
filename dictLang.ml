@@ -2,8 +2,8 @@ type ide = string;;
 type exp = Eint of int | Ebool of bool | Estring of string | Den of ide | Prod of exp * exp | Sum of exp * exp | Diff of exp * exp |
 	Eq of exp * exp | Minus of exp | IsZero of exp | Or of exp * exp | And of exp * exp | Not of exp |
 	Ifthenelse of exp * exp * exp | Let of ide * exp * exp | Fun of ide * exp | FunCall of exp * exp |
-	Letrec of ide * exp * exp | Edictionary of element list | Get of exp * ide | Set of exp * ide * exp | Rm of exp * ide | Clear of exp | ApplyOver of exp * exp
-and element = Eelem of ide * exp;;
+	Letrec of ide * exp * exp | Edictionary of eelement list | Get of exp * ide | Set of exp * ide * exp | Rm of exp * ide | Clear of exp | ApplyOver of exp * exp
+and eelement = Eelem of ide * exp;;
 
 (*ambiente polimorfo*)
 type 't env = ide -> 't;;
@@ -12,7 +12,8 @@ let applyenv (r : 't env) (i : ide) = r i;;
 let bind (r : 't env) (i : ide) (v : 't) = function x -> if x = i then v else applyenv r x;;
 
 (*tipi esprimibili*)
-type evT = Int of int | Bool of bool | String of string | Unbound | FunVal of evFun | RecFunVal of ide * evFun | Dictionary of element list | Elem of ide * evT
+type evT = Int of int | Bool of bool | String of string | Unbound | FunVal of evFun | RecFunVal of ide * evFun | Dictionary of element list
+and element = Elem of ide * evT
 and evFun = ide * exp * evT env;;
 
 (*rts*)
@@ -105,11 +106,12 @@ let rec rm dict field = match dict with
 ;;
 
 
-
 (*interprete*)
 let rec eval (e : exp) (r : evT env) : evT = match e with
-	Edictionary(elem::d) -> Dictionary((eval elem r)::(eval d r)) |
-	Eelem(chiave, valore) -> Elem(chiave, eval valore r) |
+	Edictionary(d) -> (let rec evalelement lista = match lista with
+								Eelem(chiave, valore)::resto -> (Elem(chiave, (eval valore r)))::(evalelement resto) |
+								[] -> []
+					  in (Dictionary(evalelement d))) |
 	Eint n -> Int n |
 	Ebool b -> Bool b |
 	Estring s -> String s |
@@ -147,21 +149,21 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
 	                 			                eval letBody r1 |
             		_ -> failwith("non functional def")) |
     Get(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
-    							Dictionary(d) -> (eval (lookfor field d) r) |
+    							Dictionary(d) -> lookfor field d |
     							Dictionary([]) -> failwith("not found")) 
     				   else failwith("nondictionary") |
     Set(dict, field, value) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
-		    							Dictionary(d) -> if (isthere d field) then (Dictionary(set d field value))
-														 else Dictionary(Elem(field, value)::d))
+		    							Dictionary(d) -> if (isthere d field) then (Dictionary(set d field (eval value r)))
+														 else Dictionary(Elem(field, eval value r)::d))
 		    				   else failwith("nondictionary") |
 	Rm(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
 										Dictionary(d) -> Dictionary(rm d field))
 					   else failwith("nondictionary") |
 	Clear(dict) -> if (typecheck "dictionary" (eval dict r)) then Dictionary([])
 				   else failwith("nondictionary") |
-	ApplyOver(funz, dict) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
-										Dictionary(d) -> let rec applyover funz dict = match dict with
-Elem(key, valore)::resto -> (Elem(key, eval (eval (FunCall(funz, valore)) r) r))::(applyover funz resto) |
+	ApplyOver(funz, dict) -> if (typecheck "dictionary" (eval dict r)) then (match dict with
+										Edictionary(d) -> let rec applyover funz dict = match dict with
+															Eelem(key, valore)::resto -> (Elem(key, eval (FunCall(funz, valore)) r))::(applyover funz resto) |
 															[] -> []
 														 in Dictionary(applyover funz d))
 							 else failwith("nondictionary")
