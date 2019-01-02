@@ -85,6 +85,19 @@ let rec lookfor want d = match d with
 	[] -> failwith("Not found")
 ;;
 
+let rec isthere dict field = match dict with 
+	Elem(chiave, valore)::resto -> (if chiave = field then true
+									else isthere resto field) |
+	[] -> false
+;;
+
+(*Dictionary(Elem(field, value)::d)*)
+let rec set dict field value = match dict with
+	Elem(key, valore)::resto -> if key = field then Elem(key, value)::resto
+								else Elem(key, valore)::(set resto field value) |
+	[] -> failwith("Not found");
+;;
+
 (*interprete*)
 let rec eval (e : exp) (r : evT env) : evT = match e with
 	Edictionary d -> Dictionary d |
@@ -129,7 +142,8 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
     							Dictionary([]) -> failwith("not found")) 
     				   else failwith("nondictionary") |
     Set(dict, field, value) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
-		    							Dictionary(d) -> Dictionary(Elem(field, value)::d))
+		    							Dictionary(d) -> if (isthere d field) then (Dictionary(set d field value))
+														 else Dictionary(Elem(field, value)::d))
 		    				   else failwith("nondictionary")
 ;;
 
@@ -145,6 +159,7 @@ let cognome = Get(iddict, "cognome");;
 let matricola = Get(iddict, "Matricola");;
 let iddict2 = Set(iddict, "eta", Eint 22);;
 let dict2 = Set(emptydict, "prova", Estring("ASD"));;
+let dict3 = Set(iddict2, "Matricola", Eint 999999);;
 
 Printf.printf "\n\n****Dictionaries****\n";;
 eval iddict env0;;
@@ -158,6 +173,7 @@ eval matricola env0;;
 Printf.printf "\n\n****Set****\n";;
 eval iddict2 env0;;
 eval dict2 env0;;
+eval dict3 env0;;
 
 Printf.printf "\n\n*****Error*****\n";;
 eval err env0;;
