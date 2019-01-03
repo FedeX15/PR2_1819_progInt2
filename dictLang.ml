@@ -12,7 +12,7 @@ let applyenv (r : 't env) (i : ide) = r i;;
 let bind (r : 't env) (i : ide) (v : 't) = function x -> if x = i then v else applyenv r x;;
 
 (*tipi esprimibili*)
-type evT = Int of int | Bool of bool | String of string | Unbound | FunVal of evFun | RecFunVal of ide * evFun | Dictionary of element list
+type evT = Int of int | Bool of bool | String of string | Unbound | FunVal of evFun | RecFunVal of ide * evFun | Dictionary of element list 	
 and element = Elem of ide * evT
 and evFun = ide * exp * evT env;;
 
@@ -105,17 +105,6 @@ let rec rm dict field = match dict with
 	[] -> []
 ;;
 
-(*Workaround per ApplyOver*)
-let rec toexp (e : evT) : exp = match e with 
-	Int n -> Eint n |
-	Bool b -> Ebool b |
-	String s -> Estring s |
-	Dictionary(d) -> (let rec evalelement lista = match lista with
-								Elem(chiave, valore)::resto -> (Eelem(chiave, (toexp valore)))::(evalelement resto) |
-								[] -> []
-					  in (Edictionary(evalelement d)))
-;;
-
 (*interprete*)
 let rec eval (e : exp) (r : evT env) : evT = match e with
 	Edictionary(d) -> (let rec evalelement lista = match lista with
@@ -172,10 +161,20 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
 	Clear(dict) -> if (typecheck "dictionary" (eval dict r)) then Dictionary([])
 				   else failwith("nondictionary") |
 	ApplyOver(funz, dict) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
-										Dictionary(d) -> let rec applyover funz dict = match dict with
-															Elem(key, valore)::resto -> (Elem(key, (eval (FunCall(funz, toexp valore)) r)))::(applyover funz resto) |
-															[] -> []
-														 in Dictionary(applyover funz d))
+										Dictionary(d) -> let rec funcallevalued (f : exp) (valore : evT) (r : evT env) : evT = (*Workaround*)
+																let fClosure = (eval f r) in
+																		(match fClosure with
+																			FunVal(arg, fBody, fDecEnv) -> 
+																				eval fBody (bind fDecEnv arg valore) |
+																			RecFunVal(g, (arg, fBody, fDecEnv)) -> 
+																				let aVal = valore in
+																					let rEnv = (bind fDecEnv g fClosure) in
+																						let aEnv = (bind rEnv arg aVal) in
+																							eval fBody aEnv |
+																			_ -> failwith("non functional value")) in let rec applyover funz dict = match dict with
+																														Elem(key, valore)::resto -> (Elem(key, (try (funcallevalued funz valore r) with Failure("Type error") -> valore)))::( applyover funz resto) |
+																														[] -> []
+																													 in Dictionary(applyover funz d))
 							 else failwith("nondictionary")
 ;;
 
@@ -202,7 +201,7 @@ let incrementfunz = Fun("x", Sum(Den "x", Eint 1));;
 let bigfunz = Fun("x", Sum(Den "x", Prod(Den "x", Eint 2)));;
 let applieddict = ApplyOver(incrementfunz, intdict);;
 let applieddict2 = ApplyOver(bigfunz, applieddict);;
-let appliediddict = ApplyOver(bigfunz, iddict4);;
+let appliediddict = ApplyOver(incrementfunz, iddict4);;
 
 Printf.printf "\n\n****Dictionaries****\n";;
 eval iddict env0;;
