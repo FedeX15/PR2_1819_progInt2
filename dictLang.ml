@@ -93,14 +93,14 @@ let rec isthere dict field = match dict with
 	[] -> false
 ;;
 
-(*set ha valore dict con l'Elem di chiave field modificato con valore value*)
+(*set ha valore dict con l'elemento di chiave field modificato con valore value*)
 let rec set dict field value = match dict with
 	(key, valore)::resto -> if key = field then (key, value)::resto
 								else (key, valore)::(set resto field value) |
 	[] -> failwith("Not found")
 ;;
 
-(*rm ha valore dict da cui è stato rimosso l'Elem di chiave field*)
+(*rm ha valore dict da cui è stato rimosso l'elemento di chiave field*)
 let rec rm dict field = match dict with
 	(key, valore)::resto -> if key = field then resto
 								else (key, valore)::(rm resto field) |
@@ -153,11 +153,11 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
     							Dictionary(d) -> lookfor field d |
     							Dictionary([]) -> failwith("not found")) 
     				   else failwith("nondictionary") |
-    Set(dict, field, value) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with (*Set exp * ide * exp ha valore un nuovo dizionario simile a dict ma con valore value all'interno dell'Elem di chiave field*)
+    Set(dict, field, value) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with (*Set exp * ide * exp ha valore un nuovo dizionario simile a dict ma con valore value all'interno dell'elemento di chiave field*)
 		    							Dictionary(d) -> if (isthere d field) then (Dictionary(set d field (eval value r)))
 														 else Dictionary((field, eval value r)::d))
 		    				   else failwith("nondictionary") |
-	Rm(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with (*Rm exp * ide ha valore un nuovo dizionario simile a dict da cui è stato rimosso l'Elem di chiave field*)
+	Rm(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with (*Rm exp * ide ha valore un nuovo dizionario simile a dict da cui è stato rimosso l'elemento di chiave field*)
 										Dictionary(d) -> Dictionary(rm d field))
 					   else failwith("nondictionary") |
 	Clear(dict) -> if (typecheck "dictionary" (eval dict r)) then Dictionary([]) (*Clear exp ha valore un nuovo dizionario vuoto*)
@@ -187,14 +187,13 @@ let env0 = emptyenv Unbound;; (*Ambiente di partenza, vuoto*)
 let emptydict = Edictionary([]);; (*Dizionario vuoto*)
 let iddict = Edictionary(("nome", Estring("Federico"))::("cognome", Estring("Matteoni"))::("Matricola", Eint(530257))::[]);; (*Dizionario misto*)
 let intdict = Edictionary[("Uno", Eint 1); ("Dieci", Eint 10); ("Cento", Eint 100)];; (*Dizionario di interi*)
-(*let iddict2 = Dictionary([Elem("nome", "Federico"); Elem("cognome", "Matteoni"); Elem("Matricola", 530257)]);;*)
 
 let err = Get(iddict, "matricola");; (*Errore perché il campo matricola non esiste all'interno di iddict*)
 let nome = Get(iddict, "nome");;
 let cognome = Get(iddict, "cognome");;
 let matricola = Get(iddict, "Matricola");; (*Ottenimento dei valori associati alle chiavi indicate*)
 let iddict2 = Set(iddict, "eta", Eint 22);;
-let dict2 = Set(emptydict, "prova", Estring("ASD"));;
+let dict2 = Set(emptydict, "new", Estring("nuovo campo"));;
 let iddict3 = Set(iddict2, "Matricola", Eint 999999);; (*Modifica dei campi associati alle chiavi indicate*)
 let iddict4 = Rm(iddict3, "cognome");;
 let dict3 = Rm(dict2, "nonesistente");; (*Rimozione di campo e di campo non esistente nel dizionario*)
