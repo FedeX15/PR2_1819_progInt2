@@ -164,7 +164,7 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
 	Clear(dict) -> if (typecheck "dictionary" (eval dict r)) then Dictionary([]) (*Clear exp ha valore un nuovo dizionario vuoto*)
 				   else failwith("nondictionary") |
 	ApplyOver(funz, dict) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with (*ApplyOver of exp * exp ha valore un nuovo dizionario simile a dict a cui è stata applicata la funzione funz ad ogni campo, se la funzione è applicabile a quel campo*)
-										Dictionary(d) -> let rec funcallevalued (f : exp) (valore : evT) (r : evT env) : evT = (*Workaround*)
+										Dictionary(d) -> let rec funcallevalued (f : exp) (valore : evT) (r : evT env) : evT = (*Workaround: simile a FunCall ma non faccio eval sull'arg, che è già un evT*)
 																let fClosure = (eval f r) in
 																		(match fClosure with
 																			FunVal(arg, fBody, fDecEnv) -> 
