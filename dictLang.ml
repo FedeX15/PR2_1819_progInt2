@@ -80,25 +80,28 @@ let non x = if (typecheck "bool" x)
 		Bool(false) -> Bool(true))
 	else failwith("Type error");;
 
+(*lookfor ha valore il valore associato a field all'interno di un dizionario d, altrimenti ha valore Failure("Not Found")*)
 let rec lookfor field d = match d with 
 	Elem(chiave, valore)::resto -> (if chiave = field then valore
 									else lookfor field resto) |
 	[] -> failwith("Not found")
 ;;
 
+(*isthere ha valore true se field è una chiave esistente all'interno di un dizionario dict, altrimenti ha valore false*)
 let rec isthere dict field = match dict with 
 	Elem(chiave, valore)::resto -> (if chiave = field then true
 									else isthere resto field) |
 	[] -> false
 ;;
 
-(*Dictionary(Elem(field, value)::d)*)
+(*set ha valore dict con l'Elem di chiave field modificato con valore value*)
 let rec set dict field value = match dict with
 	Elem(key, valore)::resto -> if key = field then Elem(key, value)::resto
 								else Elem(key, valore)::(set resto field value) |
 	[] -> failwith("Not found")
 ;;
 
+(*rm ha valore dict da cui è stato rimosso l'Elem di chiave field*)
 let rec rm dict field = match dict with
 	Elem(key, valore)::resto -> if key = field then resto
 								else Elem(key, valore)::(rm resto field) |
@@ -147,20 +150,20 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
 	    		Fun(i, fBody) -> let r1 = (bind r f (RecFunVal(f, (i, fBody, r)))) in
 	                 			                eval letBody r1 |
             		_ -> failwith("non functional def")) |
-    Get(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
+    Get(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with (*Get exp * ide ha come valore il campo di chiave field contenuto in dict*)
     							Dictionary(d) -> lookfor field d |
     							Dictionary([]) -> failwith("not found")) 
     				   else failwith("nondictionary") |
-    Set(dict, field, value) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
+    Set(dict, field, value) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with (*Set exp * ide * exp ha valore un nuovo dizionario simile a dict ma con valore value all'interno dell'Elem di chiave field*)
 		    							Dictionary(d) -> if (isthere d field) then (Dictionary(set d field (eval value r)))
 														 else Dictionary(Elem(field, eval value r)::d))
 		    				   else failwith("nondictionary") |
-	Rm(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
+	Rm(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with (*Rm exp * ide ha valore un nuovo dizionario simile a dict da cui è stato rimosso l'Elem di chiave field*)
 										Dictionary(d) -> Dictionary(rm d field))
 					   else failwith("nondictionary") |
-	Clear(dict) -> if (typecheck "dictionary" (eval dict r)) then Dictionary([])
+	Clear(dict) -> if (typecheck "dictionary" (eval dict r)) then Dictionary([]) (*Clear exp ha valore un nuovo dizionario vuoto*)
 				   else failwith("nondictionary") |
-	ApplyOver(funz, dict) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with
+	ApplyOver(funz, dict) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with (*ApplyOver of exp * exp ha valore un nuovo dizionario simile a dict a cui è stata applicata la funzione funz ad ogni campo, se la funzione è applicabile a quel campo*)
 										Dictionary(d) -> let rec funcallevalued (f : exp) (valore : evT) (r : evT env) : evT = (*Workaround*)
 																let fClosure = (eval f r) in
 																		(match fClosure with
@@ -180,55 +183,62 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
 
 (*TESTS*)
 
-let env0 = emptyenv Unbound;;
+let env0 = emptyenv Unbound;; (*Ambiente di partenza, vuoto*)
 
-let emptydict = Edictionary([]);;
-let iddict = Edictionary(Eelem("nome", Estring("Federico"))::Eelem("cognome", Estring("Matteoni"))::Eelem("Matricola", Eint(530257))::[]);;
-let intdict = Edictionary(Eelem("Uno", Eint 1)::Eelem("Dieci", Eint 10)::Eelem("Cento", Eint 100)::[]);;
+let emptydict = Edictionary([]);; (*Dizionario vuoto*)
+let iddict = Edictionary(Eelem("nome", Estring("Federico"))::Eelem("cognome", Estring("Matteoni"))::Eelem("Matricola", Eint(530257))::[]);; (*Dizionario misto*)
+let intdict = Edictionary(Eelem("Uno", Eint 1)::Eelem("Dieci", Eint 10)::Eelem("Cento", Eint 100)::[]);; (*Dizionario di interi*)
 (*let iddict2 = Dictionary([Elem("nome", "Federico"); Elem("cognome", "Matteoni"); Elem("Matricola", 530257)]);;*)
 
-let err = Get(iddict, "matricola");;
+let err = Get(iddict, "matricola");; (*Errore perché il campo matricola non esiste all'interno di iddict*)
 let nome = Get(iddict, "nome");;
 let cognome = Get(iddict, "cognome");;
-let matricola = Get(iddict, "Matricola");;
+let matricola = Get(iddict, "Matricola");; (*Ottenimento dei valori associati alle chiavi indicate*)
 let iddict2 = Set(iddict, "eta", Eint 22);;
 let dict2 = Set(emptydict, "prova", Estring("ASD"));;
-let iddict3 = Set(iddict2, "Matricola", Eint 999999);;
+let iddict3 = Set(iddict2, "Matricola", Eint 999999);; (*Modifica dei campi associati alle chiavi indicate*)
 let iddict4 = Rm(iddict3, "cognome");;
-let dict3 = Rm(dict2, "nonesistente");;
-let cleardict = Clear(iddict4);;
-let incrementfunz = Fun("x", Sum(Den "x", Eint 1));;
-let bigfunz = Fun("x", Sum(Den "x", Prod(Den "x", Eint 2)));;
+let dict3 = Rm(dict2, "nonesistente");; (*Rimozione di campo e di campo non esistente nel dizionario*)
+let cleardict = Clear(iddict4);; (*Pulizia di dizionario*)
+let incrementfunz = Fun("x", Sum(Den "x", Eint 1));; (*Funzione che aggiunge 1 ad un parametro x*)
+let bigfunz = Fun("x", Sum(Den "x", Prod(Den "x", Eint 2)));; (*Funzione che da x associa (x+2x)*)
 let applieddict = ApplyOver(incrementfunz, intdict);;
 let applieddict2 = ApplyOver(bigfunz, applieddict);;
-let appliediddict = ApplyOver(incrementfunz, iddict4);;
+let appliediddict = ApplyOver(incrementfunz, iddict4);; (*Applicazione delle funzioni ai dizionari, solo ai campi compatibili (interi)*)
 
+(*Stampa dei dizionari di test iniziali*)
 Printf.printf "\n\n****Dictionaries****\n";;
 eval iddict env0;;
 eval emptydict env0;;
 eval intdict env0;;
 
+(*Ottenimento di campi*)
 Printf.printf "\n\n****Get****\n";;
 eval nome env0;;
 eval cognome env0;;
 eval matricola env0;;
 
+(*Modifica di campi*)
 Printf.printf "\n\n****Set****\n";;
 eval iddict2 env0;;
 eval dict2 env0;;
 eval iddict3 env0;;
 
+(*Rimozione di campi*)
 Printf.printf "\n\n****Remove****\n";;
 eval iddict4 env0;;
 eval dict3 env0;;
 
+(*Pulizia di dizionari*)
 Printf.printf "\n\n****Clear****\n";;
 eval cleardict env0;;
 
+(*Applicazione di funzioni*)
 Printf.printf "\n\n****ApplyOver****\n";;
 eval applieddict env0;;
 eval applieddict2 env0;;
-eval appliediddict env0;; (*TODO: fix*)
+eval appliediddict env0;;
 
+(*Errori*)
 Printf.printf "\n\n****Error*****\n";;
 eval err env0;;
