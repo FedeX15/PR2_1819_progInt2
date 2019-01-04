@@ -2,8 +2,8 @@ type ide = string;;
 type exp = Eint of int | Ebool of bool | Estring of string | Den of ide | Prod of exp * exp | Sum of exp * exp | Diff of exp * exp |
 	Eq of exp * exp | Minus of exp | IsZero of exp | Or of exp * exp | And of exp * exp | Not of exp |
 	Ifthenelse of exp * exp * exp | Let of ide * exp * exp | Fun of ide * exp | FunCall of exp * exp |
-	Letrec of ide * exp * exp | Edictionary of eelement list | Get of exp * ide | Set of exp * ide * exp | Rm of exp * ide | Clear of exp | ApplyOver of exp * exp
-and eelement = Eelem of ide * exp;;
+	Letrec of ide * exp * exp | Edictionary of (ide * exp) list | Get of exp * ide | Set of exp * ide * exp | Rm of exp * ide | Clear of exp | ApplyOver of exp * exp
+;;
 
 (*ambiente polimorfo*)
 type 't env = ide -> 't;;
@@ -12,8 +12,7 @@ let applyenv (r : 't env) (i : ide) = r i;;
 let bind (r : 't env) (i : ide) (v : 't) = function x -> if x = i then v else applyenv r x;;
 
 (*tipi esprimibili*)
-type evT = Int of int | Bool of bool | String of string | Unbound | FunVal of evFun | RecFunVal of ide * evFun | Dictionary of element list 	
-and element = Elem of ide * evT
+type evT = Int of int | Bool of bool | String of string | Unbound | FunVal of evFun | RecFunVal of ide * evFun | Dictionary of (ide * evT) list 
 and evFun = ide * exp * evT env;;
 
 (*rts*)
@@ -82,36 +81,36 @@ let non x = if (typecheck "bool" x)
 
 (*lookfor ha valore il valore associato a field all'interno di un dizionario d, altrimenti ha valore Failure("Not Found")*)
 let rec lookfor field d = match d with 
-	Elem(chiave, valore)::resto -> (if chiave = field then valore
+	(chiave, valore)::resto -> (if chiave = field then valore
 									else lookfor field resto) |
 	[] -> failwith("Not found")
 ;;
 
 (*isthere ha valore true se field è una chiave esistente all'interno di un dizionario dict, altrimenti ha valore false*)
 let rec isthere dict field = match dict with 
-	Elem(chiave, valore)::resto -> (if chiave = field then true
+	(chiave, valore)::resto -> (if chiave = field then true
 									else isthere resto field) |
 	[] -> false
 ;;
 
 (*set ha valore dict con l'Elem di chiave field modificato con valore value*)
 let rec set dict field value = match dict with
-	Elem(key, valore)::resto -> if key = field then Elem(key, value)::resto
-								else Elem(key, valore)::(set resto field value) |
+	(key, valore)::resto -> if key = field then (key, value)::resto
+								else (key, valore)::(set resto field value) |
 	[] -> failwith("Not found")
 ;;
 
 (*rm ha valore dict da cui è stato rimosso l'Elem di chiave field*)
 let rec rm dict field = match dict with
-	Elem(key, valore)::resto -> if key = field then resto
-								else Elem(key, valore)::(rm resto field) |
+	(key, valore)::resto -> if key = field then resto
+								else (key, valore)::(rm resto field) |
 	[] -> []
 ;;
 
 (*interprete*)
 let rec eval (e : exp) (r : evT env) : evT = match e with
 	Edictionary(d) -> (let rec evalelement lista = match lista with
-								Eelem(chiave, valore)::resto -> (Elem(chiave, (eval valore r)))::(evalelement resto) |
+								(chiave, valore)::resto -> ((chiave, (eval valore r)))::(evalelement resto) |
 								[] -> []
 					  in (Dictionary(evalelement d))) |
 	Eint n -> Int n |
@@ -156,7 +155,7 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
     				   else failwith("nondictionary") |
     Set(dict, field, value) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with (*Set exp * ide * exp ha valore un nuovo dizionario simile a dict ma con valore value all'interno dell'Elem di chiave field*)
 		    							Dictionary(d) -> if (isthere d field) then (Dictionary(set d field (eval value r)))
-														 else Dictionary(Elem(field, eval value r)::d))
+														 else Dictionary((field, eval value r)::d))
 		    				   else failwith("nondictionary") |
 	Rm(dict, field) -> if (typecheck "dictionary" (eval dict r)) then (match (eval dict r) with (*Rm exp * ide ha valore un nuovo dizionario simile a dict da cui è stato rimosso l'Elem di chiave field*)
 										Dictionary(d) -> Dictionary(rm d field))
@@ -175,7 +174,7 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
 																						let aEnv = (bind rEnv arg aVal) in
 																							eval fBody aEnv |
 																			_ -> failwith("non functional value")) in let rec applyover funz dict = match dict with
-																														Elem(key, valore)::resto -> (Elem(key, (try (funcallevalued funz valore r) with Failure("Type error") -> valore)))::( applyover funz resto) |
+																														(key, valore)::resto -> ((key, (try (funcallevalued funz valore r) with Failure("Type error") -> valore)))::( applyover funz resto) |
 																														[] -> []
 																													 in Dictionary(applyover funz d))
 							 else failwith("nondictionary")
@@ -186,8 +185,8 @@ let rec eval (e : exp) (r : evT env) : evT = match e with
 let env0 = emptyenv Unbound;; (*Ambiente di partenza, vuoto*)
 
 let emptydict = Edictionary([]);; (*Dizionario vuoto*)
-let iddict = Edictionary(Eelem("nome", Estring("Federico"))::Eelem("cognome", Estring("Matteoni"))::Eelem("Matricola", Eint(530257))::[]);; (*Dizionario misto*)
-let intdict = Edictionary(Eelem("Uno", Eint 1)::Eelem("Dieci", Eint 10)::Eelem("Cento", Eint 100)::[]);; (*Dizionario di interi*)
+let iddict = Edictionary(("nome", Estring("Federico"))::("cognome", Estring("Matteoni"))::("Matricola", Eint(530257))::[]);; (*Dizionario misto*)
+let intdict = Edictionary[("Uno", Eint 1); ("Dieci", Eint 10); ("Cento", Eint 100)];; (*Dizionario di interi*)
 (*let iddict2 = Dictionary([Elem("nome", "Federico"); Elem("cognome", "Matteoni"); Elem("Matricola", 530257)]);;*)
 
 let err = Get(iddict, "matricola");; (*Errore perché il campo matricola non esiste all'interno di iddict*)
