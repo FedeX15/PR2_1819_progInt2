@@ -237,6 +237,12 @@ eval applieddict env0;;
 eval applieddict2 env0;;
 eval appliediddict env0;;
 
+(*Stampa dei dizionari iniziali*)
+Printf.printf "\n\n****Original Dictionaries****\n";;
+eval iddict env0;;
+eval emptydict env0;;
+eval intdict env0;;
+
 (*Errori*)
 Printf.printf "\n\n****Error*****\n";;
 eval err env0;;
