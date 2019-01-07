@@ -203,6 +203,7 @@ let bigfunz = Fun("x", Sum(Den "x", Prod(Den "x", Eint 2)));; (*Funzione che da 
 let applieddict = ApplyOver(incrementfunz, intdict);;
 let applieddict2 = ApplyOver(bigfunz, applieddict);;
 let appliediddict = ApplyOver(incrementfunz, iddict4);; (*Applicazione delle funzioni ai dizionari, solo ai campi compatibili (interi)*)
+let moreoperationsdict = ApplyOver(bigfunz, ApplyOver(incrementfunz, Set(intdict, "Due", Eint 2)));;
 
 (*Stampa dei dizionari di test iniziali*)
 Printf.printf "\n\n****Dictionaries****\n";;
@@ -236,6 +237,7 @@ Printf.printf "\n\n****ApplyOver****\n";;
 eval applieddict env0;;
 eval applieddict2 env0;;
 eval appliediddict env0;;
+eval moreoperationsdict env0;;
 
 (*Stampa dei dizionari iniziali*)
 Printf.printf "\n\n****Original Dictionaries****\n";;
