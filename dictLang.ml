@@ -88,7 +88,7 @@ let rec lookfor field d = match d with
 
 (*isthere ha valore true se field è una chiave esistente all'interno di un dizionario dict, altrimenti ha valore false*)
 let rec isthere dict field = match dict with 
-	(chiave, valore)::resto -> (if chiave = field then true
+	(chiave, _)::resto -> (if chiave = field then true
 									else isthere resto field) |
 	[] -> false
 ;;
@@ -110,7 +110,7 @@ let rec rm dict field = match dict with
 (*interprete*)
 let rec eval (e : exp) (r : evT env) : evT = match e with
 	Edictionary(d) -> (let rec evalelement lista = match lista with
-								(chiave, valore)::resto -> ((chiave, (eval valore r)))::(evalelement resto) |
+								(chiave, valore)::resto -> if (isthere resto chiave) then failwith("chiave duplicata") else ((chiave, (eval valore r)))::(evalelement resto) |
 								[] -> []
 					  in (Dictionary(evalelement d))) |
 	Eint n -> Int n |
@@ -187,6 +187,7 @@ let env0 = emptyenv Unbound;; (*Ambiente di partenza, vuoto*)
 let emptydict = Edictionary([]);; (*Dizionario vuoto*)
 let iddict = Edictionary(("nome", Estring("Federico"))::("cognome", Estring("Matteoni"))::("Matricola", Eint(530257))::[]);; (*Dizionario misto*)
 let intdict = Edictionary[("Uno", Eint 1); ("Dieci", Eint 10); ("Cento", Eint 100)];; (*Dizionario di interi*)
+let doubleddict = Edictionary(("nome", Estring("Federico"))::("cognome", Estring("Matteoni"))::("nome", Eint(530257))::[]);; (*Dizionario con chiave duplicata*)
 
 let err = Get(iddict, "matricola");; (*Errore perché il campo matricola non esiste all'interno di iddict*)
 let nome = Get(iddict, "nome");;
@@ -199,11 +200,11 @@ let iddict4 = Rm(iddict3, "cognome");;
 let dict3 = Rm(dict2, "nonesistente");; (*Rimozione di campo e di campo non esistente nel dizionario*)
 let cleardict = Clear(iddict4);; (*Pulizia di dizionario*)
 let incrementfunz = Fun("x", Sum(Den "x", Eint 1));; (*Funzione che aggiunge 1 ad un parametro x*)
-let bigfunz = Fun("x", Sum(Den "x", Prod(Den "x", Eint 2)));; (*Funzione che da x associa (x+2x)*)
+let bigfunz = Fun("x", Sum(Den "x", Prod(Den "x", Eint 2)));; (*Funzione che a x associa (3x)*)
 let applieddict = ApplyOver(incrementfunz, intdict);;
 let applieddict2 = ApplyOver(bigfunz, applieddict);;
-let appliediddict = ApplyOver(incrementfunz, iddict4);; (*Applicazione delle funzioni ai dizionari, solo ai campi compatibili (interi)*)
-let moreoperationsdict = ApplyOver(bigfunz, ApplyOver(incrementfunz, Set(intdict, "Due", Eint 2)));;
+let appliediddict = ApplyOver(incrementfunz, iddict4);;
+let moreoperationsdict = ApplyOver(bigfunz, ApplyOver(incrementfunz, Set(intdict, "Due", Eint 2)));; (*Applicazione delle funzioni ai dizionari, solo ai campi compatibili (interi)*)
 
 (*Stampa dei dizionari di test iniziali*)
 Printf.printf "\n\n****Dictionaries****\n";;
@@ -247,4 +248,4 @@ eval intdict env0;;
 
 (*Errori*)
 Printf.printf "\n\n****Error*****\n";;
-eval err env0;;
+eval doubleddict env0;;
